@@ -175,6 +175,36 @@ Like the plugin? [Buy me a coffee via PayPal](https://www.paypal.me/kunalnagar/1
 
 See [WordPress.org changelog](https://wordpress.org/plugins/custom-404-pro/changelog/) for the full history.
 
+### 3.16.0
+- Add an index on the logs table `created` column, used by the retention policy added in 3.14.0.
+- Widen the logs table `id` column to `bigint`; the previous `mediumint` silently stopped accepting rows at 8,388,607 entries.
+- Fix schema and cron setup being skipped for users who update without deactivating first.
+- Schema upgrades now run only on admin, cron or WP-CLI requests, never on a front-end page load.
+
+### 3.15.6
+- Fix admin CSS/JS being served with a hardcoded `3.2.0` cache-busting version, leaving browsers on stale assets across updates.
+- Accessibility: associate every Settings field with its label.
+- Remove a leftover `console.warn()` debug call from the admin JavaScript.
+
+### 3.15.5
+- Security: neutralize spreadsheet formula injection (CSV injection) in the CSV log export, reachable via the attacker-controlled Referer and User Agent columns.
+- Security: escape every value interpolated into the 404 notification email.
+- CSV export now uses RFC 4180 quoting, streams in batches, and no longer emits PHP 8.4 deprecation notices into the downloaded file.
+
+### 3.15.4
+- Fix Logs table sorting: sorting by IP, Path, Referer or User Agent produced invalid SQL and returned a database error. Only the Created column sorted correctly.
+- Fix searching and then sorting the Logs table: `ORDER BY` was emitted before `WHERE`, breaking the query.
+- Fix Logs table pagination reading the entire log table into memory on every page view; pagination is now applied in SQL.
+- Fix paging a tied sort showing some entries twice and omitting others; sorting now always ends on the unique entry ID.
+- Escape log values rendered in the Logs table.
+
+### 3.15.2
+- Confirm compatibility with WordPress 7.1.
+- Declare accurate `Requires at least` (5.0) and `Requires PHP` (7.4) values in the plugin header.
+
+### 3.15.1
+- Confirm compatibility with WordPress 7.0.
+
 ### 3.15.0
 - Add full translation support: all user-facing strings are now wrapped in i18n functions and a `.pot` template is shipped with the plugin. Includes a CI job to validate `.po` files contributed by translators.
 

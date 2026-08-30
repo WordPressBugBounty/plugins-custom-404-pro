@@ -2,9 +2,9 @@
 Contributors: kunalnagar
 Donate link: https://www.paypal.me/kunalnagar88/10
 Tags: 404, redirect, custom 404, error page, logging
-Requires at least: 3.0.1
-Tested up to: 7.0
-Stable tag: 3.15.1
+Requires at least: 5.0
+Tested up to: 7.1
+Stable tag: 3.16.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -80,7 +80,46 @@ Please open an issue on [GitHub](https://github.com/kunalnagar/custom-404-pro/is
 2. Global Redirect settings — choose a WordPress page or a custom URL
 3. General settings — logging, email notifications, IP recording, and redirect status code
 
+== Upgrade Notice ==
+
+= 3.16.0 =
+Adds an index to the 404 logs table and widens its ID column. The change is applied once, on the first WordPress admin page load after updating; front-end visitors never trigger it. On a table of a million rows this took about three seconds in testing. If your logs table is very large, consider setting a retention limit under Settings > General before updating.
+
+= 3.15.2 =
+Confirms compatibility with WordPress 7.1. The declared minimum WordPress version has been corrected from 3.0.1 to 5.0 to match what the plugin actually supports.
+
 == Changelog ==
+
+= 3.16.0 =
+* Add an index on the logs table `created` column. The retention policy added in 3.14.0 both sorts and filters on that column, so until now every daily cleanup ran a full table scan.
+* Widen the logs table `id` column from mediumint to bigint. The old column ran out of values at 8,388,607 rows, after which a busy site silently stopped recording new 404s.
+* Fix schema and cron setup being skipped for anyone who updates the plugin without deactivating it first. Only the activation hook applied them, and that hook does not run on an in-place update, so the daily cleanup event was never scheduled for existing installations.
+* Schema changes are applied on the first WordPress admin page load, cron run or WP-CLI command after updating, never on a front-end request, so no site visitor waits on the table rebuild.
+* Declare the logs table timestamp columns in lowercase. WordPress 6.4 and earlier compare column types case-sensitively, so the previous uppercase declaration made every upgrade check reapply the same unnecessary ALTER TABLE.
+
+= 3.15.6 =
+* Fix the admin stylesheet and script being served with a hardcoded cache-busting version of 3.2.0. Because the value never changed, browsers kept serving cached copies of both files across every update since that release. They are now versioned with the current plugin version.
+* Accessibility: associate every field on the Settings screens with its label, so screen readers announce each control instead of reading an unlabelled input.
+* Remove a leftover console.warn() debug call from the admin JavaScript.
+* Remove two unused variables in the settings form handlers.
+
+= 3.15.5 =
+* Security: neutralize spreadsheet formula injection in the CSV log export. The Referer and User Agent columns are supplied by whoever triggered the 404, and were written to the export unescaped, so a crafted request could plant a formula that executed when an administrator opened the file in Excel, LibreOffice or Google Sheets.
+* Security: escape every value interpolated into the 404 notification email. The same attacker-supplied request data was rendering as live markup in the administrator's mail client.
+* The CSV export is now written with proper CSV quoting, so values containing quotes, commas or newlines no longer corrupt the file, and is streamed in batches instead of being assembled in memory.
+* The CSV export no longer emits PHP deprecation notices on PHP 8.4 and later, which on sites with debug display enabled were written into the downloaded file itself. Quoting now follows RFC 4180, so backslashes in user agent strings survive the export intact.
+
+= 3.15.4 =
+* Fix Logs table sorting. The sortable column headers submit `ip`, `path`, `referer` and `user_agent`, but the query builder only recognised the short legacy keys `i`, `p`, `r` and `u`. Unrecognised columns fell through and appended a bare sort direction, producing invalid SQL, so every column except Created returned a database error instead of results.
+* Fix searching and then sorting the Logs table. The ORDER BY clause was emitted before WHERE, which is invalid SQL, so any search combined with a sort broke the query entirely.
+* Fix Logs table pagination reading the whole log table into memory on every page view. It selected every row and then discarded all but the current page in PHP. Pagination is now applied in SQL, so the screen stays responsive on sites with large log tables.
+* Fix paging a sort with repeated values showing some entries twice while never showing others. Log timestamps are stored to the second and a burst of 404s shares one value, and rows are only returned in a predictable order when the sort distinguishes every row. Sorting now always ends on the entry ID.
+* Sort directions and column names are now resolved against a whitelist rather than interpolated into the query.
+* Escape log values rendered in the Logs table and give each row checkbox an accessible label.
+
+= 3.15.2 =
+* Confirm compatibility with WordPress 7.1
+* Declare "Requires at least" (5.0) and "Requires PHP" (7.4) in the plugin header so WordPress can block updates on sites that cannot run the plugin. The readme previously advertised WordPress 3.0.1 support, which the code has not supported for several releases.
 
 = 3.15.1 =
 * Confirm compatibility with WordPress 7.0

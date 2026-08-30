@@ -59,6 +59,20 @@ class AdminClass {
 	}
 
 	/**
+	 * Returns the version string used to cache-bust admin assets.
+	 *
+	 * Tied to the plugin version so that a release always invalidates the
+	 * browser cache. The previous hardcoded '3.2.0' meant users kept running
+	 * stale CSS and JS through every update since that release.
+	 *
+	 * @since 3.15.6
+	 * @return string Asset version string.
+	 */
+	public static function asset_version(): string {
+		return defined( 'CUSTOM_404_PRO_VERSION' ) ? CUSTOM_404_PRO_VERSION : '3.2.0';
+	}
+
+	/**
 	 * Enqueues admin stylesheets for plugin pages.
 	 */
 	public function enqueue_styles() {
@@ -66,7 +80,7 @@ class AdminClass {
 			if ( array_key_exists( 'page', $_REQUEST ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 				$request = sanitize_text_field( wp_unslash( $_REQUEST['page'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 				if ( 'c4p-settings' === $request || 'c4p-main' === $request || 'c4p-about' === $request ) {
-					wp_enqueue_style( 'custom-404-pro-admin-css', plugin_dir_url( __FILE__ ) . 'css/custom-404-pro-admin.css', array(), '3.2.0' );
+					wp_enqueue_style( 'custom-404-pro-admin-css', plugin_dir_url( __FILE__ ) . 'css/custom-404-pro-admin.css', array(), self::asset_version() );
 				}
 			}
 		}
@@ -80,7 +94,7 @@ class AdminClass {
 			if ( array_key_exists( 'page', $_REQUEST ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 				$request = sanitize_text_field( wp_unslash( $_REQUEST['page'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 				if ( 'c4p-settings' === $request || 'c4p-main' === $request ) {
-					wp_enqueue_script( 'custom-404-pro-admin-js', plugin_dir_url( __FILE__ ) . 'js/custom-404-pro-admin.js', array( 'jquery' ), '3.2.0', false );
+					wp_enqueue_script( 'custom-404-pro-admin-js', plugin_dir_url( __FILE__ ) . 'js/custom-404-pro-admin.js', array( 'jquery' ), self::asset_version(), false );
 				}
 			}
 		}
@@ -113,7 +127,6 @@ class AdminClass {
 	 * Handles the global redirect settings form submission.
 	 */
 	public function form_settings_global_redirect() {
-		$nonce = isset( $_POST['form-settings-global-redirect'] ) ? sanitize_text_field( wp_unslash( $_POST['form-settings-global-redirect'] ) ) : '';
 		if ( check_admin_referer( 'form-settings-global-redirect', 'form-settings-global-redirect' ) && current_user_can( 'manage_options' ) ) {
 			$mode = isset( $_POST['mode'] ) ? sanitize_text_field( wp_unslash( $_POST['mode'] ) ) : '';
 			$page = isset( $_POST['mode_page'] ) ? sanitize_text_field( wp_unslash( $_POST['mode_page'] ) ) : '';
@@ -130,7 +143,6 @@ class AdminClass {
 	 * Handles the general settings form submission.
 	 */
 	public function form_settings_general() {
-		$nonce = isset( $_POST['form-settings-general'] ) ? sanitize_text_field( wp_unslash( $_POST['form-settings-general'] ) ) : '';
 		if ( check_admin_referer( 'form-settings-general', 'form-settings-general' ) && current_user_can( 'manage_options' ) ) {
 			$send_email                = isset( $_POST['send_email'] ) ? sanitize_text_field( wp_unslash( $_POST['send_email'] ) ) : '';
 			$logging_enabled           = isset( $_POST['logging_enabled'] ) ? sanitize_text_field( wp_unslash( $_POST['logging_enabled'] ) ) : '';
@@ -318,6 +330,12 @@ class AdminClass {
 	/**
 	 * Sends a 404 notification email to the admin.
 	 *
+	 * Every interpolated value is escaped. The path, referer and user agent all
+	 * come straight off the request that triggered the 404, so an attacker
+	 * chooses their contents; unescaped they would render as live markup inside
+	 * the admin's HTML mail client.
+	 *
+	 * @since 3.15.5 Escapes all interpolated values.
 	 * @param string $ip         User IP address.
 	 * @param string $path       Requested 404 path.
 	 * @param string $referer    HTTP referer.
@@ -334,27 +352,27 @@ class AdminClass {
 		}
 		$headers[] = 'From: Site Admin <' . $admin_email . '>' . "\r\n";
 		$headers[] = 'Content-Type: text/html; charset=UTF-8';
-		$message   = '<p>' . __( 'Here are the 404 Log Details:', 'custom-404-pro' ) . '</p>';
+		$message   = '<p>' . esc_html__( 'Here are the 404 Log Details:', 'custom-404-pro' ) . '</p>';
 		$message  .= '<table>';
 		$message  .= '<tr>';
-		$message  .= '<th>' . __( 'Site', 'custom-404-pro' ) . '</th>';
-		$message  .= '<td>' . $current_site_name . '</td>';
+		$message  .= '<th>' . esc_html__( 'Site', 'custom-404-pro' ) . '</th>';
+		$message  .= '<td>' . esc_html( $current_site_name ) . '</td>';
 		$message  .= '</tr>';
 		$message  .= '<tr>';
-		$message  .= '<th>' . __( 'User IP', 'custom-404-pro' ) . '</th>';
-		$message  .= '<td>' . $ip . '</td>';
+		$message  .= '<th>' . esc_html__( 'User IP', 'custom-404-pro' ) . '</th>';
+		$message  .= '<td>' . esc_html( $ip ) . '</td>';
 		$message  .= '</tr>';
 		$message  .= '<tr>';
-		$message  .= '<th>' . __( '404 Path', 'custom-404-pro' ) . '</th>';
-		$message  .= '<td>' . $path . '</td>';
+		$message  .= '<th>' . esc_html__( '404 Path', 'custom-404-pro' ) . '</th>';
+		$message  .= '<td>' . esc_html( $path ) . '</td>';
 		$message  .= '</tr>';
 		$message  .= '<tr>';
-		$message  .= '<th>' . __( 'Referer', 'custom-404-pro' ) . '</th>';
-		$message  .= '<td>' . $referer . '</td>';
+		$message  .= '<th>' . esc_html__( 'Referer', 'custom-404-pro' ) . '</th>';
+		$message  .= '<td>' . esc_html( $referer ) . '</td>';
 		$message  .= '</tr>';
 		$message  .= '<tr>';
-		$message  .= '<th>' . __( 'User Agent', 'custom-404-pro' ) . '</th>';
-		$message  .= '<td>' . $user_agent . '</td>';
+		$message  .= '<th>' . esc_html__( 'User Agent', 'custom-404-pro' ) . '</th>';
+		$message  .= '<td>' . esc_html( $user_agent ) . '</td>';
 		$message  .= '</tr>';
 		$message  .= '</table>';
 		wp_mail(
